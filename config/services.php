@@ -33,6 +33,13 @@ return [
 
     'sparkpost' => [
         'secret' => env('SPARKPOST_SECRET'),
-    ]
+    ],
+
+'azure_openai' => [
+    'api_key' => env('AZURE_OPENAI_API_KEY'),
+    'endpoint' => env('AZURE_OPENAI_ENDPOINT'),
+],
+
+
 
 ];

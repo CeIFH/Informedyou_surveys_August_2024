@@ -1,0 +1,8 @@
+{
+  "resources/views/themes/tailwind/assets/js/app.js": {
+    "file": "assets/app-U-NI35do.js",
+    "name": "app",
+    "src": "resources/views/themes/tailwind/assets/js/app.js",
+    "isEntry": true
+  }
+}

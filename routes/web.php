@@ -16,6 +16,40 @@ use Illuminate\Support\Facades\Route;
 use TCG\Voyager\Facades\Voyager;
 use Wave\Facades\Wave;
 
+use App\Http\Livewire\Wave\SurveyBuilder;
+use App\Http\Livewire\Wave\SurveyResponse;
+use App\Http\Livewire\Wave\Home;
+use App\Http\Livewire\Wave\FolderShow;
+use App\Http\Livewire\Wave\CompletionMessage;
+use App\Http\Livewire\Wave\SurveyExport;
+use App\Http\Livewire\Wave\SurveyDelete;
+use App\Http\Livewire\Wave\SurveyDuplicate;
+use App\Http\Livewire\Wave\SurveyShow;
+
+//dashboards
+Route::get('/survey/dashboard', Home::class)->name('home');
+
+
+
+// Surveys
+
+Route::get('/survey/create', SurveyBuilder::class)->name('survey.create');
+Route::get('/survey/{id}', SurveyResponse::class)->name('survey.show');
+Route::get('/survey/{survey}/response/{response}/completion', CompletionMessage::class)->name('completion.message');
+Route::get('/survey/{surveyId}/edit', SurveyBuilder::class)->name('survey.edit');
+Route::get('/survey/duplicate/{id}', SurveyDuplicate::class)->name('survey.duplicate');
+Route::get('/survey/{id}/export', SurveyExport::class)->name('survey.export');
+Route::delete('/survey/{id}/delete', SurveyDelete::class)->name('survey.delete');
+/* Route::get('/survey/{surveyId}', SurveyShow::class)->name('survey.show'); */
+
+
+
+// Folders
+Route::get('/folder/{id}', FolderShow::class)->name('folder.show');
+
+
+
+
 // Authentication routes
 Auth::routes();
 

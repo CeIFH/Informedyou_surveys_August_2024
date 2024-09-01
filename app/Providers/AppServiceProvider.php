@@ -5,6 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
+use App\Http\Livewire\Wave\BuildWithAi;
+use App\Http\Livewire\Wave\FolderCreate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -58,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
 
             return true;
         });
+
+        Livewire::component('wave.folder-create', FolderCreate::class);
     }
 
     private function setSchemaDefaultLength(): void
