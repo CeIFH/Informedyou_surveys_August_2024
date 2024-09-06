@@ -7,6 +7,7 @@ use Livewire\WithFileUploads;
 use App\Models\Survey;
 use App\Models\Folder;
 use App\Models\CompletionMessage;
+use App\Models\SurveyResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
@@ -31,6 +32,7 @@ class SurveyBuilder extends Component
     public $isEditMode = false;
     public $showSuccessModal = false;
     public $surveyUrl = '';
+    public $responses = [];
 
     protected $rules = [
         'title' => 'required|string|max:255',
@@ -360,5 +362,37 @@ class SurveyBuilder extends Component
         return view('livewire.wave.survey-builder', [
             'surveyId' => $this->surveyId,
         ])->layout('layouts.app');
+    }
+
+    public function saveResponse()
+    {
+        $this->validate([
+            'responses.*' => 'required',
+        ]);
+
+        try {
+            DB::transaction(function () {
+                $formattedResponses = [];
+                foreach ($this->questions as $index => $question) {
+                    $formattedResponses[] = [
+                        'question' => $question['question'],
+                        'type' => $question['type'],
+                        'response' => $this->responses[$index] ?? null,
+                    ];
+                }
+
+                $surveyResponse = SurveyResponse::create([
+                    'survey_id' => $this->surveyId,
+                    'responses' => $formattedResponses,
+                ]);
+
+                Log::info('Survey response saved', ['response_id' => $surveyResponse->id]);
+                session()->flash('message', 'Survey response submitted successfully.');
+                $this->responses = []; // Clear responses after successful submission
+            });
+        } catch (\Exception $e) {
+            Log::error('Error saving survey response', ['error' => $e->getMessage()]);
+            session()->flash('error', 'Error submitting survey response: ' . $e->getMessage());
+        }
     }
 }

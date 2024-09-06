@@ -21,6 +21,7 @@ class Home extends Component
     public $folderSearch = '';
     public $surveySearch = '';
     public $selectedFolderId = null;
+    public $selectedSurveyId;
 
     // Sorting variables for folders
     public $folderSortField = 'name';
@@ -87,7 +88,7 @@ class Home extends Component
 
         $this->newFolderName = '';
         $this->showFolderModal = false;
-        $this->emit('folderCreated');
+        $this->dispatch('folderCreated');
     }
 
     public function editFolder(Folder $folder)
@@ -171,5 +172,11 @@ class Home extends Component
             'totalSurveys' => $totalSurveys,
             'selectedFolder' => $this->selectedFolderId ? Folder::find($this->selectedFolderId) : null,
         ]);
+    }
+
+    public function mount()
+    {
+        // Set a default survey ID or the first survey's ID
+        $this->selectedSurveyId = Survey::first()->id ?? null;
     }
 }

@@ -16,5 +16,14 @@ class Folder extends Model
         return $this->hasMany(Survey::class);
     }
 
-    
+    // New method to save folder response
+    public function saveResponse($response)
+    {
+        $this->responses()->create(['response' => $response]);
+    }
+
+    public function responses()
+    {
+        return $this->hasMany(FolderResponse::class);
+    }
 }

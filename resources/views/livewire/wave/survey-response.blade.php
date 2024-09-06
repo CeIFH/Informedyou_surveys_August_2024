@@ -1,5 +1,5 @@
 <div>
-<style>
+<!-- <style>
     .survey-input {
         width: 100% !important;
         padding: 0.5rem;
@@ -32,7 +32,7 @@
         ring-offset-color: #ffffff;
         ring-offset-width: 2px;
     }
-</style>
+</style> -->
 
 
 
@@ -40,8 +40,14 @@
     <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl mb-8">{{ $survey->title }}</h1>
 
     @if (session()->has('message'))
-        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
-            <p class="font-medium">{{ session('message') }}</p>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ session('message') }}</span>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ session('error') }}</span>
         </div>
     @endif
 
@@ -62,11 +68,11 @@
                     </label>
                     @if($question['type'] == 'text')
                         <input type="text" wire:model.lazy="responses.{{ $index }}" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
-                    @elseif($question['type'] == 'radio' || $question['type'] == 'multiple_choice')
+                    @elseif($question['type'] == 'multiple_choice')
                         <div class="mt-2 space-y-4">
                             @foreach($question['options'] as $optionIndex => $option)
                                 <div class="flex items-center">
-                                    <input id="radio-{{ $index }}-{{ $optionIndex }}" type="radio" wire:model.lazy="responses.{{ $index }}" value="{{ $option }}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" @if(isset($question['required']) && $question['required']) required @endif>
+                                    <input id="radio-{{ $index }}-{{ $optionIndex }}" name="responses[{{ $index }}]" type="radio" wire:model.lazy="responses.{{ $index }}" value="{{ $option }}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" @if(isset($question['required']) && $question['required']) required @endif>
                                     <label for="radio-{{ $index }}-{{ $optionIndex }}" class="ml-3 block text-sm font-medium text-gray-700">{{ $option }}</label>
                                 </div>
                             @endforeach
@@ -203,6 +209,45 @@
                     document.getElementById(`signature-data-${index}`).value = '';
                     @this.set(`signatures.${index}`, '');
                 }
+            }
+        });
+
+        let startTimes = {};
+        let currentQuestion = null;
+
+        function startTimingQuestion(questionIndex) {
+            if (currentQuestion !== null) {
+                stopTimingQuestion(currentQuestion);
+            }
+            startTimes[questionIndex] = new Date();
+            currentQuestion = questionIndex;
+        }
+
+      /*   function stopTimingQuestion(questionIndex) {
+            if (startTimes[questionIndex]) {
+                const endTime = new Date();
+                const timeSpent = Math.round((endTime - startTimes[questionIndex]) / 1000); // Convert to seconds
+                @this.call('updateQuestionTiming', questionIndex, timeSpent);
+                delete startTimes[questionIndex];
+            }
+        } */
+
+        // Start timing the first question
+        startTimingQuestion(0);
+
+        // Add event listeners to all question divs
+        document.querySelectorAll('[id^="question-"]').forEach(function(questionDiv) {
+            const questionIndex = questionDiv.id.split('-')[1];
+            
+            questionDiv.addEventListener('focusin', function() {
+                startTimingQuestion(questionIndex);
+            });
+        });
+
+        // Stop timing when form is submitted
+        document.querySelector('form').addEventListener('submit', function() {
+            if (currentQuestion !== null) {
+                stopTimingQuestion(currentQuestion);
             }
         });
     });

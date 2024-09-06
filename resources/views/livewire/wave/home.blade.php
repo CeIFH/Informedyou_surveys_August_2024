@@ -131,7 +131,11 @@
                     {{ $folders->links() }}
                 </div>
             </div>
-
+ <!-- After the Surveys section -->
+ <div class="mt-8">
+        <livewire:wave.survey-views-analytics :survey-id="$selectedSurveyId" />
+    </div>
+</div>
             <!-- Surveys Section -->
             <div class="bg-white shadow-sm rounded-lg">
                 <div class="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center bg-indigo-50">
@@ -210,12 +214,15 @@
                                 <div class="mt-auto flex justify-between items-center">
                                     <a href="{{ route('survey.show', $survey->id) }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-500">View</a>
                                     <a href="{{ route('survey.edit', $survey->id) }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-500">Edit</a>
-                                  
+                                    <livewire:wave.survey-dropdown :survey="$survey" :key="'survey-dropdown-'.$survey->id" />
                                 </div>
                             </div>
                             @endforeach
                         </div>
                     @else
+
+
+                    
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-indigo-50">
                                 <tr>
@@ -272,7 +279,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $survey->created_at->format('M d, Y') }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <a href="{{ route('survey.edit', $survey->id) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
-                                       
+                                        <livewire:wave.survey-dropdown :survey="$survey" :key="'survey-dropdown-'.$survey->id" />
                                     </td>
                                 </tr>
                                 @endforeach
@@ -330,4 +337,6 @@
         </div>
         @endif
     </div>
-</div>
+
+   
+

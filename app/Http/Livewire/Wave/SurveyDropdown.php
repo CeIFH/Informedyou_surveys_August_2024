@@ -2,33 +2,35 @@
 
 namespace App\Http\Livewire\Wave;
 
-use Closure;
-use Illuminate\Contracts\View\View;
 use Livewire\Component;
-
 
 class SurveyDropdown extends Component
 {
-    public $icon;
+    public $survey;
 
-    /**
-     * Create a new component instance.
-     *
-     * @param string $icon
-     * @return void
-     */
-    public function __construct($icon = null)
+    public function mount($survey)
     {
-        $this->icon = $icon;
+        $this->survey = $survey;
     }
 
-    /**
-     * Get the view / contents that represent the component.
-     *
-     * @return \Illuminate\Contracts\View\View|\Closure|string
-     */
     public function render()
     {
         return view('livewire.wave.survey-dropdown');
+    }
+
+    public function deleteSurvey()
+    {
+        // Add logic to delete the survey
+        $this->survey->delete();
+        $this->dispatch('surveyDeleted');
+    }
+
+    public function duplicateSurvey()
+    {
+        // Add logic to duplicate the survey
+        $newSurvey = $this->survey->replicate();
+        $newSurvey->title = 'Copy of ' . $newSurvey->title;
+        $newSurvey->save();
+        $this->dispatch('surveyDuplicated');
     }
 }

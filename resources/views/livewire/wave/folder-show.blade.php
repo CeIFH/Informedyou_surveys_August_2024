@@ -88,4 +88,93 @@
         </div>
     </div>
     @endif
+
+    <!-- New Survey Views Chart Section -->
+    <div class="mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Survey Views Chart</h2>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <livewire:livewire-line-chart
+                key="{{ $viewsChartModel->reactiveKey() }}"
+                :line-chart-model="$viewsChartModel"
+            />
+        </div>
+    </div>
+
+    <!-- Survey Table -->
+    <div class="mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Surveys in {{ $folder->name }}</h2>
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                        <th scope="col" class="relative px-6 py-3">
+                            <span class="sr-only">Actions</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach($surveys as $survey)
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ $survey->title }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $survey->responses_count ?? 0 }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $survey->created_at->format('M d, Y') }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="{{ route('survey.show', $survey->id) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4">
+            {{ $surveys->links() }}
+        </div>
+    </div>
+
+    <!-- New Survey Views Table and Chart Section -->
+    <div class="mt-12">
+        <h2 class="text-2xl font-semibold mb-4">Survey Views Analysis</h2>
+        
+        <!-- Views Table -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Views</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach($viewsData as $datetime => $count)
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ \Carbon\Carbon::parse($datetime)->format('H:i') }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ $count }}</div>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Views Chart -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <livewire:livewire-line-chart
+                key="{{ $viewsChartModel->reactiveKey() }}"
+                :line-chart-model="$viewsChartModel"
+            />
+        </div>
+    </div>
 </div>
+

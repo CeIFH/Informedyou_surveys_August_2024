@@ -15,9 +15,10 @@ class SurveyShow extends Component
 
     public function mount($surveyId)
     {
-        $survey = Survey::findOrFail($surveyId);
-        $this->title = $survey->title;
-        $this->questions = json_decode($survey->content, true);
+        $this->survey = Survey::findOrFail($surveyId);
+        $this->survey->views()->create(); // Create a new view record
+        $this->title = $this->survey->title;
+        $this->questions = json_decode($this->survey->content, true);
 
         // Initialize responses array
         foreach ($this->questions as $index => $question) {

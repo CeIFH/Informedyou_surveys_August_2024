@@ -74,4 +74,30 @@ class Survey extends Model
         $condition = str_replace(['{{', '}}'], ['$responses["', '"]'], $condition);
         return eval("return $condition;");
     }
+
+    /**
+     * Define the relationship: A Survey has many Views.
+     */
+    public function views()
+    {
+        return $this->hasMany(View::class);
+    }
+
+    // New method to increment visit count
+    public function incrementVisitCount()
+    {
+        $this->views_count = $this->views_count + 1;
+        $this->save();
+    }
+
+    // New method to save survey response
+    public function saveResponse($response)
+    {
+        $this->responses()->create(['response' => $response]);
+    }
+
+    public function responses()
+    {
+        return $this->hasMany(SurveyResponse::class);
+    }
 }
