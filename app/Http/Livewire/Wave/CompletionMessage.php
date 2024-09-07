@@ -72,6 +72,6 @@ class CompletionMessage extends Component
 
     public function render()
     {
-        return view('livewire.completion-message');
+        return view('livewire.wave.completion-message');
     }
 }

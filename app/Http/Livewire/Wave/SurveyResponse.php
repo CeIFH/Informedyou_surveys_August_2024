@@ -214,6 +214,9 @@ class SurveyResponse extends Component
             $this->isCompleted = true;
 
             Log::info('Survey response saved successfully', ['id' => $this->surveyResponse->id]);
+
+            // Redirect to the completion message page
+            return redirect()->route('survey.completion', ['survey' => $this->survey, 'response' => $this->surveyResponse]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error saving survey response', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -225,12 +228,12 @@ class SurveyResponse extends Component
     private function getIpAddress()
     {
         $ipAddress = request()->ip();
-        
+
         // If you're behind a proxy or load balancer, you might need to use:
         // $ipAddress = request()->header('X-Forwarded-For') ?? request()->ip();
 
         Log::info('IP Address captured', ['ip' => $ipAddress]);
-        
+
         return $ipAddress;
     }
 
@@ -238,7 +241,7 @@ class SurveyResponse extends Component
     {
         try {
             $response = Http::get("https://ipapi.co/{$ipAddress}/json/");
-            
+
             if ($response->successful()) {
                 $data = $response->json();
                 Log::info('Geolocation data retrieved', ['data' => $data]);

@@ -29,8 +29,6 @@ use App\Http\Livewire\Wave\SurveyShow;
 //dashboards
 Route::get('/survey/dashboard', Home::class)->name('home');
 
-
-
 // Surveys
 
 Route::get('/survey/create', SurveyBuilder::class)->name('survey.create');
@@ -42,12 +40,12 @@ Route::get('/survey/{id}/export', SurveyExport::class)->name('survey.export');
 Route::delete('/survey/{id}/delete', SurveyDelete::class)->name('survey.delete');
 /* Route::get('/survey/{surveyId}', SurveyShow::class)->name('survey.show'); */
 
-
-
 // Folders
 Route::get('/folder/{id}', FolderShow::class)->name('folder.show');
 
 
+// Completion message route
+Route::get('/survey/{survey}/completion/{response}', CompletionMessage::class)->name('survey.completion');
 
 
 // Authentication routes
