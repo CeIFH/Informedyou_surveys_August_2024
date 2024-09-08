@@ -4,69 +4,46 @@ namespace App\Http\Livewire\Wave;
 
 use Livewire\Component;
 use App\Models\Survey;
-use App\Models\SurveyResponse;
-use App\Models\CompletionMessage as CompletionMessageModel;
+use Illuminate\Support\Facades\Log;
 
 class CompletionMessage extends Component
 {
     public $survey;
-    public $response;
-    public $message;
+    public $messageTitle;
+    public $messageContent;
+    public $redirectUrl;
+    public $redirectType;
+    public $redirectDelay;
+    public $surveyTitle;
 
-    public function mount(Survey $survey, SurveyResponse $response)
+    public function mount(Survey $survey)
     {
         $this->survey = $survey;
-        $this->response = $response;
-        $this->setCompletionMessage();
+        $this->getCompletionMessage();
+        $this->redirectUrl = $survey->redirect_url ?: route('survey.show', $survey->id);
+        $this->redirectType = $survey->redirect_type;
+        $this->redirectDelay = $survey->redirect_delay;
+        $this->surveyTitle = $survey->title;
+
+        Log::info('Completion message loaded with redirect settings', [
+            'survey_id' => $survey->id,
+            'survey_title' => $this->surveyTitle,
+            'message_title' => $this->messageTitle,
+            'redirect_url' => $this->redirectUrl,
+            'redirect_type' => $this->redirectType,
+            'redirect_delay' => $this->redirectDelay,
+        ]);
     }
 
-    private function setCompletionMessage()
+    private function getCompletionMessage()
     {
-        $completionMessage = $this->survey->completionMessages()
-            ->where(function ($query) {
-                $query->where('is_default', true)
-                    ->orWhereRaw('? REGEXP `condition`', [$this->getResponseString()]);
-            })
-            ->first();
-
-        if ($completionMessage) {
-            $this->message = $this->parseMessage($completionMessage->content);
+        $defaultMessage = $this->survey->completionMessages->where('is_default', true)->first();
+        if ($defaultMessage) {
+            $this->messageTitle = $defaultMessage->title;
+            $this->messageContent = $defaultMessage->content;
         } else {
-            $this->message = "Thank you for completing the survey!";
-        }
-    }
-
-    private function getResponseString()
-    {
-        // Convert the response data to a string for regex matching
-        return json_encode($this->response->data);
-    }
-
-    private function parseMessage($message)
-    {
-        // Replace variables
-        $message = preg_replace_callback('/\{(\w+)\}/', function($matches) {
-            return $this->response->data[$matches[1]] ?? $matches[0];
-        }, $message);
-
-        // Evaluate calculations
-        $message = preg_replace_callback('/\{\{(.+?)\}\}/', function($matches) {
-            return $this->evaluateExpression($matches[1]);
-        }, $message);
-
-        return $message;
-    }
-
-    private function evaluateExpression($expression)
-    {
-        $expression = preg_replace_callback('/\{(\w+)\}/', function($matches) {
-            return $this->response->data[$matches[1]] ?? 0;
-        }, $expression);
-
-        try {
-            return eval("return $expression;");
-        } catch (\Throwable $e) {
-            return "Error in expression";
+            $this->messageTitle = 'Thank You';
+            $this->messageContent = 'Thank you for completing the survey!';
         }
     }
 

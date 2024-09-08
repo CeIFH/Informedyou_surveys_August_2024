@@ -36,6 +36,10 @@ class CreateSurveysTable extends Migration
             $table->tinyInteger('conditional_rule')->default(1)->comment('1 - Enable / 0 - Disable');
             $table->text('description')->nullable();
 
+            $table->string('redirect_url')->nullable();
+            $table->enum('redirect_type', ['button', 'automatic'])->default('button');
+            $table->integer('redirect_delay')->default(5);
+
             $table->timestamps();
         });
     }

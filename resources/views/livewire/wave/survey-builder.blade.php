@@ -308,6 +308,29 @@
             </button>
         </div>
 
+        <!-- New Redirect Options -->
+        <div class="mt-8" x-data="{ showDelay: @entangle('redirectType').defer === 'automatic' }">
+            <h3 class="text-lg font-medium text-gray-900">Redirect Options</h3>
+            
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">Redirect URL</label>
+                <input type="url" wire:model.defer="redirectUrl" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="https://example.com or leave blank to return to survey page">
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">Redirect Type</label>
+                <select wire:model="redirectType" x-on:change="showDelay = $event.target.value === 'automatic'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="button">Button Press</option>
+                    <option value="automatic">Automatic</option>
+                </select>
+            </div>
+
+            <div x-show="showDelay" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-90" x-transition:enter-end="opacity-100 transform scale-100" class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">Redirect Delay (seconds)</label>
+                <input type="number" wire:model.defer="redirectDelay" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            </div>
+        </div>
+
         <!-- SECTION: Save Survey Button -->
         <div class="mt-8 flex justify-end">
             <button type="button" wire:click="saveSurvey" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white {{ $isEditMode ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700' }} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">

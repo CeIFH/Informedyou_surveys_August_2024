@@ -33,6 +33,9 @@ class SurveyBuilder extends Component
     public $showSuccessModal = false;
     public $surveyUrl = '';
     public $responses = [];
+    public $redirectUrl = '';
+    public $redirectType = 'button';
+    public $redirectDelay = 5;
 
     protected $rules = [
         'title' => 'required|string|max:255',
@@ -53,6 +56,9 @@ class SurveyBuilder extends Component
         'completionMessages.*.content' => 'required|string',
         'completionMessages.*.condition' => 'nullable|string',
         'defaultMessageIndex' => 'required|integer|min:0',
+        'redirectUrl' => 'nullable|string',
+        'redirectType' => 'required|in:button,automatic',
+        'redirectDelay' => 'required_if:redirectType,automatic|integer|min:1',
     ];
 
 
@@ -117,6 +123,9 @@ class SurveyBuilder extends Component
         $this->defaultMessageIndex = $survey->completionMessages->search(function ($message) {
             return $message->is_default;
         });
+        $this->redirectUrl = $survey->redirect_url ?? '';
+        $this->redirectType = $survey->redirect_type ?? 'button';
+        $this->redirectDelay = $survey->redirect_delay ?? 5;
     }
 
     public function saveSurvey()
@@ -130,6 +139,9 @@ class SurveyBuilder extends Component
                     'description' => $this->description,
                     'content' => json_encode($this->questions),
                     'folder_id' => $this->selectedFolder,
+                    'redirect_url' => $this->formatUrl($this->redirectUrl),
+                    'redirect_type' => $this->redirectType,
+                    'redirect_delay' => $this->redirectDelay,
                 ];
 
                 if ($this->isEditMode) {
@@ -160,10 +172,32 @@ class SurveyBuilder extends Component
                 Log::info($message, ['survey_id' => $this->surveyId, 'folder_id' => $this->selectedFolder]);
                 session()->flash('message', $message);
             });
+
+            // Log the saved data for debugging
+            Log::info('Survey saved with redirect settings', [
+                'survey_id' => $this->surveyId,
+                'redirect_url' => $this->redirectUrl,
+                'redirect_type' => $this->redirectType,
+                'redirect_delay' => $this->redirectDelay,
+            ]);
+
         } catch (\Exception $e) {
             Log::error('Error saving survey', ['error' => $e->getMessage()]);
             session()->flash('error', 'Error saving survey: ' . $e->getMessage());
         }
+    }
+
+    private function formatUrl($url)
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        // Remove existing protocol if present
+        $url = preg_replace('#^https?://#', '', $url);
+
+        // Add https:// prefix
+        return 'https://' . $url;
     }
 
     public function addQuestion()
@@ -394,5 +428,16 @@ class SurveyBuilder extends Component
             Log::error('Error saving survey response', ['error' => $e->getMessage()]);
             session()->flash('error', 'Error submitting survey response: ' . $e->getMessage());
         }
+    }
+
+    #[On('clearSurveyData')]
+    public function clearSurveyData()
+    {
+        // Clear the survey data in the component
+        $this->responses = [];
+        // Add any other data that needs to be cleared
+
+        // Dispatch an event to notify that the data has been cleared
+        $this->dispatch('surveyDataCleared');
     }
 }

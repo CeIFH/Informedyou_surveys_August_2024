@@ -14,6 +14,7 @@ use App\Models\SurveyResponse as SurveyResponseModel;
 use Spatie\Browsershot\Browsershot;
 use Jenssegers\Agent\Agent;
 use Carbon\Carbon;
+use Livewire\Attributes\On;
 
 class SurveyResponse extends Component
 {
@@ -386,6 +387,7 @@ class SurveyResponse extends Component
         ]);
     }
 
+    #[On('clearSurveyData')]
     public function clearSurveyData()
     {
         Log::info('Clearing survey data');

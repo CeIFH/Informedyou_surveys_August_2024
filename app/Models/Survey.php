@@ -9,7 +9,14 @@ class Survey extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'content', 'folder_id'];
+    protected $fillable = [
+        'title',
+        'content',
+        'folder_id',
+        'redirect_url',
+        'redirect_type',
+        'redirect_delay',
+    ];
 
     protected $casts = [
         'content' => 'array',
