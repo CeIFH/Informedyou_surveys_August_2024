@@ -27,23 +27,49 @@ class SurveyResponse extends Component
     public $newCompletionMessage = '';
     public $isCompleted = false;
     public $responseStartedAt;
+    public $surveyToken;
 
     public function mount($id)
     {
         $this->survey = Survey::findOrFail($id);
         $questions = json_decode($this->survey->content, true);
 
+        // Generate a unique token for this survey session
+        $this->surveyToken = md5(uniqid(rand(), true));
+        session(['survey_token' => $this->surveyToken]);
+
+        $this->initializeResponses($questions);
+    }
+
+    private function initializeResponses($questions)
+    {
+        $this->responses = [];
+        $this->signatures = [];
         foreach ($questions as $index => $question) {
             if ($question['type'] == 'checkbox') {
                 $this->responses[$index] = [];
             } elseif ($question['type'] == 'signature') {
                 $this->signatures[$index] = null;
-            } elseif ($question['type'] == 'multiple_choice') {
-                $this->responses[$index] = '';
             } else {
                 $this->responses[$index] = '';
             }
         }
+    }
+
+    public function render()
+    {
+        // Check if the survey token matches
+        if (session('survey_token') !== $this->surveyToken) {
+            $this->initializeResponses(json_decode($this->survey->content, true));
+        }
+
+        $this->debugSurveyResponseData();
+        return view('livewire.wave.survey-response', [
+            'survey' => $this->survey,
+            'questions' => json_decode($this->survey->content, true),
+            'completionMessages' => $this->survey->completionMessages,
+            'isCompleted' => $this->isCompleted,
+        ]);
     }
 
     public function updatedResponses($value, $key)
@@ -215,7 +241,13 @@ class SurveyResponse extends Component
 
             Log::info('Survey response saved successfully', ['id' => $this->surveyResponse->id]);
 
-            // Redirect to the completion message page
+            // Clear the survey data
+            $this->clearSurveyData();
+
+            // Clear the survey in progress flag
+            session()->forget('survey_token');
+
+            // Redirect to the completion page
             return redirect()->route('survey.completion', ['survey' => $this->survey, 'response' => $this->surveyResponse]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -354,14 +386,28 @@ class SurveyResponse extends Component
         ]);
     }
 
-    public function render()
+    public function clearSurveyData()
     {
-        $this->debugSurveyResponseData();
-        return view('livewire.wave.survey-response', [
-            'survey' => $this->survey,
-            'questions' => json_decode($this->survey->content, true),
-            'completionMessages' => $this->survey->completionMessages,
-            'isCompleted' => $this->isCompleted,
-        ]);
+        Log::info('Clearing survey data');
+        $questions = json_decode($this->survey->content, true);
+        $this->responses = [];
+        $this->signatures = [];
+        foreach ($questions as $index => $question) {
+            if ($question['type'] == 'checkbox') {
+                $this->responses[$index] = [];
+            } elseif ($question['type'] == 'signature') {
+                $this->signatures[$index] = null;
+            } else {
+                $this->responses[$index] = '';
+            }
+        }
+        $this->responseStartedAt = null;
+        $this->isCompleted = false;
+        $this->surveyToken = md5(uniqid(rand(), true));
+        session(['survey_token' => $this->surveyToken]);
+        Log::info('Survey data cleared', ['responses' => $this->responses, 'signatures' => $this->signatures]);
+
+        // Dispatch event to clear client-side data
+        $this->dispatch('surveyDataCleared');
     }
 }
