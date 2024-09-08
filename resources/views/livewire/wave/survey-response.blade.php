@@ -51,76 +51,86 @@
             </div>
         @endif
 
-        <form wire:submit.prevent="submit" class="space-y-8">
-        @foreach($questions as $index => $question)
-            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div class="px-4 py-5 sm:p-6">
-                    @if(!empty($question['subheading']))
-                        <h2 class="text-xl font-semibold text-gray-900 mb-4">{{ $question['subheading'] }}</h2>
-                    @endif
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            {{ $question['question'] }}
-                            <span class="text-sm text-gray-500 ml-1">(Points: {{ $question['points'] }})</span>
-                            @if(isset($question['required']) && $question['required'])
-                                <span class="text-red-500 ml-1">*</span>
-                            @endif
-                        </label>
-                        @if($question['type'] == 'text')
-                            <input type="text" wire:model.lazy="responses.{{ $index }}" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
-                        @elseif($question['type'] == 'multiple_choice')
-                            <div class="mt-2 space-y-4">
-                                @foreach($question['options'] as $optionIndex => $option)
-                                    <div class="flex items-center">
-                                        <input id="radio-{{ $index }}-{{ $optionIndex }}" name="responses[{{ $index }}]" type="radio" wire:model.lazy="responses.{{ $index }}" value="{{ $option }}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" @if(isset($question['required']) && $question['required']) required @endif>
-                                        <label for="radio-{{ $index }}-{{ $optionIndex }}" class="ml-3 block text-sm font-medium text-gray-700">{{ $option }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif($question['type'] == 'checkbox')
-                            <div class="mt-2 space-y-4">
-                                @foreach($question['options'] as $optionIndex => $option)
-                                    <div class="flex items-center">
-                                        <input id="checkbox-{{ $index }}-{{ $optionIndex }}" type="checkbox" wire:model.lazy="responses.{{ $index }}.{{ $optionIndex }}" value="{{ $option }}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                                        <label for="checkbox-{{ $index }}-{{ $optionIndex }}" class="ml-3 block text-sm font-medium text-gray-700">{{ $option }}</label>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @elseif($question['type'] == 'dropdown')
-                            <select wire:model.lazy="responses.{{ $index }}" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
-                                <option value="">Select an option</option>
-                                @foreach($question['options'] as $option)
-                                    <option value="{{ $option }}">{{ $option }}</option>
-                                @endforeach
-                            </select>
-                        @elseif($question['type'] == 'textarea')
-                            <textarea wire:model.lazy="responses.{{ $index }}" rows="3" class="mt-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif></textarea>
-                        @elseif($question['type'] == 'signature')
-                            <div class="mt-1">
-                                <canvas id="signature-pad-{{ $index }}" class="border border-gray-300 rounded-md" style="width: 100%; height: 200px; background-color: white;"></canvas>
-                                <input type="hidden" id="signature-data-{{ $index }}" wire:model.lazy="signatures.{{ $index }}">
-                                <button type="button" onclick="clearSignature({{ $index }})" class="mt-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Clear</button>
-                            </div>
-                        @elseif(in_array($question['type'], ['email', 'phone', 'number', 'date', 'website', 'time', 'city']))
-                            <input type="{{ $question['type'] }}" wire:model.lazy="responses.{{ $index }}" class="survey-input" @if(isset($question['required']) && $question['required']) required @endif>
-                        @elseif($question['type'] == 'file')
-                            <input type="file" wire:model.lazy="responses.{{ $index }}" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
+        @if(!$isActive)
+            <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+                <h1 class="text-3xl font-extrabold text-gray-900 sm:text-4xl mb-8">{{ $survey->title }}</h1>
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p class="font-bold">Survey Inactive</p>
+                    <p>{{ $inactiveMessage }}</p>
+                </div>
+            </div>
+        @else
+            <form wire:submit.prevent="submit" class="space-y-8">
+            @foreach($questions as $index => $question)
+                <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        @if(!empty($question['subheading']))
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">{{ $question['subheading'] }}</h2>
                         @endif
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                {{ $question['question'] }}
+                                <span class="text-sm text-gray-500 ml-1">(Points: {{ $question['points'] }})</span>
+                                @if(isset($question['required']) && $question['required'])
+                                    <span class="text-red-500 ml-1">*</span>
+                                @endif
+                            </label>
+                            @if($question['type'] == 'text')
+                                <input type="text" wire:model.lazy="responses.{{ $index }}" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
+                            @elseif($question['type'] == 'multiple_choice')
+                                <div class="mt-2 space-y-4">
+                                    @foreach($question['options'] as $optionIndex => $option)
+                                        <div class="flex items-center">
+                                            <input id="radio-{{ $index }}-{{ $optionIndex }}" name="responses[{{ $index }}]" type="radio" wire:model.lazy="responses.{{ $index }}" value="{{ $option }}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" @if(isset($question['required']) && $question['required']) required @endif>
+                                            <label for="radio-{{ $index }}-{{ $optionIndex }}" class="ml-3 block text-sm font-medium text-gray-700">{{ $option }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @elseif($question['type'] == 'checkbox')
+                                <div class="mt-2 space-y-4">
+                                    @foreach($question['options'] as $optionIndex => $option)
+                                        <div class="flex items-center">
+                                            <input id="checkbox-{{ $index }}-{{ $optionIndex }}" type="checkbox" wire:model.lazy="responses.{{ $index }}.{{ $optionIndex }}" value="{{ $option }}" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                                            <label for="checkbox-{{ $index }}-{{ $optionIndex }}" class="ml-3 block text-sm font-medium text-gray-700">{{ $option }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @elseif($question['type'] == 'dropdown')
+                                <select wire:model.lazy="responses.{{ $index }}" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
+                                    <option value="">Select an option</option>
+                                    @foreach($question['options'] as $option)
+                                        <option value="{{ $option }}">{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif($question['type'] == 'textarea')
+                                <textarea wire:model.lazy="responses.{{ $index }}" rows="3" class="mt-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif></textarea>
+                            @elseif($question['type'] == 'signature')
+                                <div class="mt-1">
+                                    <canvas id="signature-pad-{{ $index }}" class="border border-gray-300 rounded-md" style="width: 100%; height: 200px; background-color: white;"></canvas>
+                                    <input type="hidden" id="signature-data-{{ $index }}" wire:model.lazy="signatures.{{ $index }}">
+                                    <button type="button" onclick="clearSignature({{ $index }})" class="mt-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Clear</button>
+                                </div>
+                            @elseif(in_array($question['type'], ['email', 'phone', 'number', 'date', 'website', 'time', 'city']))
+                                <input type="{{ $question['type'] }}" wire:model.lazy="responses.{{ $index }}" class="survey-input" @if(isset($question['required']) && $question['required']) required @endif>
+                            @elseif($question['type'] == 'file')
+                                <input type="file" wire:model.lazy="responses.{{ $index }}" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" @if(isset($question['required']) && $question['required']) required @endif>
+                            @endif
+                            </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
 
-            <div class="flex justify-between items-center mt-8">
-                <button type="submit" wire:loading.attr="disabled" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <span wire:loading.remove>Submit Survey</span>
-                    <span wire:loading>Submitting...</span>
-                </button>
-                <button wire:click.prevent="generateAndDownloadPdf" type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Download PDF
-                </button>
-            </div>
-        </form>
+                <div class="flex justify-between items-center mt-8">
+                    <button type="submit" wire:loading.attr="disabled" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <span wire:loading.remove>Submit Survey</span>
+                        <span wire:loading>Submitting...</span>
+                    </button>
+                    <button wire:click.prevent="generateAndDownloadPdf" type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Download PDF
+                    </button>
+                </div>
+            </form>
+        @endif
     </div>
     @if ($errors->any())
         <div class="alert alert-danger">

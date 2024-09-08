@@ -29,17 +29,24 @@ class SurveyResponse extends Component
     public $isCompleted = false;
     public $responseStartedAt;
     public $surveyToken;
+    public $isActive;
+    public $inactiveMessage;
 
     public function mount($id)
     {
         $this->survey = Survey::findOrFail($id);
-        $questions = json_decode($this->survey->content, true);
+        $this->isActive = $this->survey->is_active;
+        $this->inactiveMessage = $this->survey->inactive_message;
 
-        // Generate a unique token for this survey session
-        $this->surveyToken = md5(uniqid(rand(), true));
-        session(['survey_token' => $this->surveyToken]);
+        if ($this->isActive) {
+            $questions = json_decode($this->survey->content, true);
 
-        $this->initializeResponses($questions);
+            // Generate a unique token for this survey session
+            $this->surveyToken = md5(uniqid(rand(), true));
+            session(['survey_token' => $this->surveyToken]);
+
+            $this->initializeResponses($questions);
+        }
     }
 
     private function initializeResponses($questions)
@@ -59,6 +66,13 @@ class SurveyResponse extends Component
 
     public function render()
     {
+        if (!$this->isActive) {
+            return view('livewire.wave.survey-inactive', [
+                'survey' => $this->survey,
+                'inactiveMessage' => $this->inactiveMessage,
+            ]);
+        }
+
         // Check if the survey token matches
         if (session('survey_token') !== $this->surveyToken) {
             $this->initializeResponses(json_decode($this->survey->content, true));

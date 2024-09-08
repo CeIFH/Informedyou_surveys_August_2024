@@ -36,6 +36,8 @@ class SurveyBuilder extends Component
     public $redirectUrl = '';
     public $redirectType = 'button';
     public $redirectDelay = 5;
+    public $isActive = true;
+    public $inactiveMessage = 'This survey is currently inactive.';
 
     protected $rules = [
         'title' => 'required|string|max:255',
@@ -59,6 +61,8 @@ class SurveyBuilder extends Component
         'redirectUrl' => 'nullable|string',
         'redirectType' => 'required|in:button,automatic',
         'redirectDelay' => 'required_if:redirectType,automatic|integer|min:1',
+        'isActive' => 'boolean',
+        'inactiveMessage' => 'required_if:isActive,false|string',
     ];
 
 
@@ -126,6 +130,8 @@ class SurveyBuilder extends Component
         $this->redirectUrl = $survey->redirect_url ?? '';
         $this->redirectType = $survey->redirect_type ?? 'button';
         $this->redirectDelay = $survey->redirect_delay ?? 5;
+        $this->isActive = $survey->is_active;
+        $this->inactiveMessage = $survey->inactive_message;
     }
 
     public function saveSurvey()
@@ -142,6 +148,8 @@ class SurveyBuilder extends Component
                     'redirect_url' => $this->formatUrl($this->redirectUrl),
                     'redirect_type' => $this->redirectType,
                     'redirect_delay' => $this->redirectDelay,
+                    'is_active' => $this->isActive,
+                    'inactive_message' => $this->inactiveMessage,
                 ];
 
                 if ($this->isEditMode) {

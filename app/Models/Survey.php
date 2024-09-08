@@ -16,6 +16,8 @@ class Survey extends Model
         'redirect_url',
         'redirect_type',
         'redirect_delay',
+        'is_active',
+        'inactive_message',
     ];
 
     protected $casts = [

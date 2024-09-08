@@ -23,6 +23,7 @@ class CreateSurveysTable extends Migration
             $table->text('success_msg')->nullable();
             $table->text('thanks_msg')->nullable();
             $table->integer('is_active')->default(1);
+            $table->text('inactive_message')->nullable();
             $table->unsignedBigInteger('allow_share_section')->nullable();
             $table->unsignedBigInteger('allow_comments')->nullable();
             $table->string('theme', 191)->default('theme1');
