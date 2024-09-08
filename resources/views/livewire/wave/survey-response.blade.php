@@ -280,10 +280,7 @@
                     signaturePad.fillStyle = 'white';
                     signaturePad.fillRect(0, 0, canvas.width, canvas.height);
                 });
-                // Clear Livewire data
-                if (typeof Livewire !== 'undefined') {
-                    Livewire.emit('clearSurveyData');
-                }
+             
                 // Make an AJAX call to clear server-side session
                 fetch('/clear-survey-session', {
                     method: 'POST',
