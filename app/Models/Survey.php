@@ -11,14 +11,28 @@ class Survey extends Model
 
     protected $fillable = [
         'title',
+        'description',
         'content',
         'folder_id',
+        'company_id',
         'redirect_url',
         'redirect_type',
         'redirect_delay',
         'is_active',
         'inactive_message',
+        'completion_message', // Make sure this is included
     ];
+
+    protected static function booted()
+    {
+        static::saving(function ($survey) {
+            \Log::info('Saving survey', [
+                'survey_id' => $survey->id,
+                'folder_id' => $survey->folder_id,
+                'company_id' => $survey->company_id,
+            ]);
+        });
+    }
 
     protected $casts = [
         'content' => 'array',
@@ -108,5 +122,10 @@ class Survey extends Model
     public function responses()
     {
         return $this->hasMany(SurveyResponse::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }

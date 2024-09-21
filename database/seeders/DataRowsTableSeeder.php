@@ -1219,6 +1219,42 @@ class DataRowsTableSeeder extends Seeder
                 'details' => NULL,
                 'order' => 9,
             ),
+
+          /*   75 => 
+            array (
+                'id' => 77,
+                'data_type_id' => 3,
+                'field' => 'company_id',
+                'type' => 'select_dropdown',
+                'display_name' => 'Company',
+                'required' => 1,
+                'browse' => 1,
+                'read' => 1,
+                'edit' => 1,
+                'add' => 1,
+                'delete' => 0,
+                'details' => NULL,
+                'order' => 11,
+            ), */
+
+            76 => 
+            array (
+                'id' => 78,
+                'data_type_id' => 3,
+                'field' => 'user_belongstomany_company_relationship',
+                'type' => 'relationship',
+                'display_name' => 'Company',
+                'required' => 1,
+                'browse' => 1,
+                'read' => 1,
+                'edit' => 1,
+                'add' => 1,
+                'delete' => 0,
+                'details' => '{"model":"App\\\\Models\\\\Company","table":"companies","type":"belongsToMany","column":"id","key":"id","label":"name","pivot_table":"company_user","pivot":"1"}',
+                'order' => 12,
+            ),
+
+
         ));
         
         

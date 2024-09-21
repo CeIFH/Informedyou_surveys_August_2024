@@ -1,4 +1,4 @@
-import 'alpinejs';
+/* import 'alpinejs';
 
 window.inIframe = function() {
     try {
@@ -31,3 +31,4 @@ window.searchFocused = function(focused){
         document.getElementById('bg-fade').classList.remove('opacity-25');
     }
 }
+ */

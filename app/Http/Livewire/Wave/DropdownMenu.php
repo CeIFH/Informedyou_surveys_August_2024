@@ -5,10 +5,16 @@ namespace App\Http\Livewire\Wave;
 use Livewire\Component;
 use App\Models\Survey;
 
-class DropdownMenu extends Component
+class SurveyDropdown extends Component
 {
-    public $survey;
-    public $isOpen = false;
+    public Survey $survey;
+    public $showDropdown = false;
+    public $showDeleteConfirmation = false;
+    public $deleteConfirmationText = '';
+
+    protected $rules = [
+        'deleteConfirmationText' => 'required|in:DELETE'
+    ];
 
     public function mount(Survey $survey)
     {
@@ -17,11 +23,45 @@ class DropdownMenu extends Component
 
     public function toggleDropdown()
     {
-        $this->isOpen = !$this->isOpen;
+        $this->showDropdown = !$this->showDropdown;
+    }
+
+    public function duplicateSurvey()
+    {
+        $newSurvey = $this->survey->replicate();
+        $newSurvey->title = 'Copy of ' . $newSurvey->title;
+        $newSurvey->save();
+
+        $this->showDropdown = false;
+        $this->emitUp('surveyDuplicated');
+        session()->flash('message', 'Survey duplicated successfully.');
+    }
+
+    public function confirmDelete()
+    {
+        $this->showDropdown = false;
+        $this->showDeleteConfirmation = true;
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteConfirmation = false;
+        $this->deleteConfirmationText = '';
+        $this->resetValidation();
+    }
+
+    public function deleteSurvey()
+    {
+        $this->validate();
+
+        $this->survey->delete();
+        $this->showDeleteConfirmation = false;
+        $this->emitUp('surveyDeleted');
+        session()->flash('message', 'Survey deleted successfully.');
     }
 
     public function render()
     {
-        return view('livewire.dropdown-menu');
+        return view('livewire.wave.survey-dropdown');
     }
 }

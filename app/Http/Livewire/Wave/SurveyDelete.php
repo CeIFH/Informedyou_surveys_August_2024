@@ -7,23 +7,22 @@ use App\Models\Survey;
 
 class SurveyDelete extends Component
 {
-    public $surveyId;
+    public Survey $survey;
 
-    public function mount($surveyId)
+    public function mount(Survey $survey)
     {
-        $this->surveyId = $surveyId;
+        $this->survey = $survey;
     }
 
     public function deleteSurvey()
     {
-        $survey = Survey::findOrFail($this->surveyId);
-        $survey->delete();
-
-        return redirect()->route('home')->with('message', 'Survey deleted successfully.');
+        $this->survey->delete();
+        $this->dispatch('surveyDeleted');
+        session()->flash('message', 'Survey deleted successfully.');
     }
 
     public function render()
     {
-        return view('livewire.survey-delete');
+        return view('livewire.wave.survey-delete');
     }
 }

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use App\Http\Livewire\Wave\BuildWithAi;
 use App\Http\Livewire\Wave\FolderCreate;
+use App\Http\Livewire\Wave\Home;
+use App\Http\Livewire\Wave\SurveyDropdown;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -63,6 +65,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Livewire::component('wave.folder-create', FolderCreate::class);
+        Livewire::component('wave.home', Home::class);
+        Livewire::component('wave.survey-dropdown', SurveyDropdown::class);
     }
 
     private function setSchemaDefaultLength(): void

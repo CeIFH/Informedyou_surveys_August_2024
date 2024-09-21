@@ -23,7 +23,7 @@ class SurveyBuilder extends Component
     public $questions = [];
     public $draggingQuestion = null;
     public $file;
-    public $selectedFolder = null;
+    public $selectedFolderId = null;
     public $newFolderName = '';
     public $folders = [];
     public $showFolderModal = false;
@@ -52,7 +52,7 @@ class SurveyBuilder extends Component
         'questions.*.required' => 'boolean',
         'questions.*.show_subheading' => 'boolean',
         'questions.*.show_points' => 'boolean',
-        'selectedFolder' => 'nullable|exists:folders,id',
+        'selectedFolderId' => 'nullable|exists:folders,id',
         'completionMessages' => 'required|array|min:1',
         'completionMessages.*.title' => 'required|string|max:255',
         'completionMessages.*.content' => 'required|string',
@@ -74,9 +74,35 @@ class SurveyBuilder extends Component
             $this->surveyId = $surveyId;
             $this->isEditMode = true;
             $this->loadSurvey();
+            
+            // Ensure the selected company is set in the session
+            $survey = Survey::findOrFail($surveyId);
+            session(['selected_company_id' => $survey->company_id]);
+            $this->selectedFolderId = $survey->folder_id;
         } else {
             $this->initializeCompletionMessages();
+            
+            // For new surveys, ensure a company is selected
+            if (!session('selected_company_id')) {
+                $firstCompany = auth()->user()->companies()->first();
+                if ($firstCompany) {
+                    session(['selected_company_id' => $firstCompany->id]);
+                } else {
+                    throw new \Exception('No companies available. Please create a company first.');
+                }
+            }
         }
+
+        Log::info('SurveyBuilder mounted', [
+            'surveyId' => $this->surveyId,
+            'selectedFolderId' => $this->selectedFolderId,
+            'isEditMode' => $this->isEditMode,
+        ]);
+    }
+
+    public function updatedSelectedFolderId($value)
+    {
+        Log::info('Selected folder ID updated', ['newValue' => $value]);
     }
 
     #[On('aiSurveyGenerated')] 
@@ -101,7 +127,9 @@ class SurveyBuilder extends Component
 
     public function loadFolders()
     {
-        $this->folders = Folder::all();
+        $companyId = session('selected_company_id');
+        $this->folders = Folder::where('company_id', $companyId)->get();
+        Log::info('Folders loaded', ['count' => count($this->folders)]);
     }
 
     public function initializeCompletionMessages()
@@ -116,7 +144,7 @@ class SurveyBuilder extends Component
         $survey = Survey::findOrFail($this->surveyId);
         $this->title = $survey->title;
         $this->questions = json_decode($survey->content, true);
-        $this->selectedFolder = $survey->folder_id;
+        $this->selectedFolderId = $survey->folder_id;
         $this->completionMessages = $survey->completionMessages->map(function ($message) {
             return [
                 'title' => $message->title,
@@ -140,30 +168,44 @@ class SurveyBuilder extends Component
 
         try {
             DB::transaction(function () {
+                $companyId = session('selected_company_id');
+
+                if (!$companyId) {
+                    throw new \Exception('No company selected. Please select a company before saving the survey.');
+                }
+
+                Log::info('Saving survey', [
+                    'selectedFolderId' => $this->selectedFolderId,
+                    'companyId' => $companyId,
+                ]);
+
                 $surveyData = [
                     'title' => $this->title,
                     'description' => $this->description,
                     'content' => json_encode($this->questions),
-                    'folder_id' => $this->selectedFolder,
+                    'folder_id' => $this->selectedFolderId,
                     'redirect_url' => $this->formatUrl($this->redirectUrl),
                     'redirect_type' => $this->redirectType,
                     'redirect_delay' => $this->redirectDelay,
                     'is_active' => $this->isActive,
                     'inactive_message' => $this->inactiveMessage,
+                    'company_id' => $companyId,
                 ];
 
                 if ($this->isEditMode) {
-                    Log::info('Edit Mode: Updating survey', ['surveyId' => $this->surveyId]);
                     $survey = Survey::findOrFail($this->surveyId);
                     $survey->update($surveyData);
-                    Log::info('Survey updated', ['survey' => $survey]);
-                    $survey->completionMessages()->delete();
                 } else {
-                    Log::info('Create Mode: Creating new survey');
                     $survey = Survey::create($surveyData);
                     $this->surveyId = $survey->id;
                     $this->isEditMode = true;
                 }
+
+                Log::info('Survey saved', [
+                    'survey_id' => $survey->id,
+                    'folder_id' => $survey->folder_id,
+                    'company_id' => $survey->company_id,
+                ]);
 
                 foreach ($this->completionMessages as $index => $message) {
                     $survey->completionMessages()->create([
@@ -177,7 +219,7 @@ class SurveyBuilder extends Component
                 $this->surveyUrl = route('survey.show', $this->surveyId);
                 $this->showSuccessModal = true;
                 $message = $this->isEditMode ? 'Survey updated successfully.' : 'Survey created successfully.';
-                Log::info($message, ['survey_id' => $this->surveyId, 'folder_id' => $this->selectedFolder]);
+                Log::info($message, ['survey_id' => $this->surveyId, 'folder_id' => $this->selectedFolderId]);
                 session()->flash('message', $message);
             });
 
@@ -190,7 +232,7 @@ class SurveyBuilder extends Component
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error saving survey', ['error' => $e->getMessage()]);
+            Log::error('Error saving survey', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Error saving survey: ' . $e->getMessage());
         }
     }
@@ -314,7 +356,7 @@ class SurveyBuilder extends Component
 
         $folder = Folder::create(['name' => $this->newFolderName]);
         $this->loadFolders();
-        $this->selectedFolder = $folder->id;
+        $this->selectedFolderId = $folder->id;
         $this->newFolderName = '';
         $this->showFolderModal = false;
     }
@@ -392,8 +434,8 @@ class SurveyBuilder extends Component
 
     public function goHome()
     {
-        if ($this->selectedFolder) {
-            return redirect()->route('folder.show', $this->selectedFolder);
+        if ($this->selectedFolderId) {
+            return redirect()->route('folder.show', $this->selectedFolderId);
         } else {
             return redirect()->route('home');
         }
@@ -401,6 +443,11 @@ class SurveyBuilder extends Component
 
     public function render()
     {
+        Log::info('SurveyBuilder render', [
+            'selectedFolderId' => $this->selectedFolderId,
+            'foldersCount' => count($this->folders),
+        ]);
+
         return view('livewire.wave.survey-builder', [
             'surveyId' => $this->surveyId,
         ])->layout('layouts.app');

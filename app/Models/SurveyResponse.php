@@ -55,6 +55,7 @@ class SurveyResponse extends Model
         'is_active',
         'edit_count',
         'last_modified_at',
+        'company_id',
     ];
 
     // Automatically generate UUID on model creation

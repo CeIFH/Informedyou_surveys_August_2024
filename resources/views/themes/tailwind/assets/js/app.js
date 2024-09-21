@@ -1,11 +1,16 @@
-import Alpine from 'alpinejs'
-import axios from 'axios';
+/* import Alpine from 'alpinejs'
+ */import axios from 'axios';
 
-window.Alpine = Alpine;
-window.axios = axios;
+/* window.Alpine = Alpine;
+ */window.axios = axios;
 
-window.url = document.querySelector("meta[name='url']").getAttribute("content");
-window.csrf = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+
+// Replace these lines
+const urlMeta = document.querySelector("meta[name='url']");
+const csrfMeta = document.querySelector("meta[name='csrf-token']");
+
+window.url = urlMeta ? urlMeta.getAttribute("content") : '/';
+window.csrf = csrfMeta ? csrfMeta.getAttribute("content") : '';
 
 /** Adds some simple class replacers, see the following article to learn more:
  * https://devdojo.com/tnylea/animating-tailwind-transitions-on-page-load
@@ -129,8 +134,14 @@ document.addEventListener('alpine:init', () => {
 
 });
 
-Alpine.start();
-/********** END ALPINE FUNCTIONALITY **********/
+// import './bootstrap';
+
+// Remove or comment out any Alpine imports or start() calls
+// import Alpine from 'alpinejs';
+// window.Alpine = Alpine;
+// Alpine.start();
+
+// Your other JavaScript code...
 
 /********** NOTIFICATION FUNCTIONALITY **********/
 

@@ -12,9 +12,11 @@ class CreateSurveysTable extends Migration
             $table->id();
             $table->string('title');
             $table->json('content');
-            $table->unsignedBigInteger('folder_id')->nullable();
-            $table->foreign('folder_id')->references('id')->on('folders')->onDelete('set null');
-
+            $table->foreignId('folder_id')->nullable()->constrained()->onDelete('set null');
+            $table->unsignedBigInteger('company_id');
+            // Remove the company_name column
+            // $table->string('company_name');
+            
             // Adding the new columns
             $table->string('logo', 191)->nullable();
             $table->string('bccemail', 191)->nullable();
@@ -42,6 +44,11 @@ class CreateSurveysTable extends Migration
             $table->integer('redirect_delay')->default(5);
 
             $table->timestamps();
+        });
+
+        // Add the foreign key constraint after the table is created
+        Schema::table('surveys', function (Blueprint $table) {
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
         });
     }
 

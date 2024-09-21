@@ -30,7 +30,7 @@ class SurveyViewsAnalytics extends Component
 
     protected $queryString = ['startDate', 'endDate', 'perPage', 'selectedRange'];
 
-    public function mount($surveyId)
+    public function mount($surveyId = null)
     {
         $this->surveyId = $surveyId;
         $this->updateDateRange();
@@ -74,10 +74,15 @@ class SurveyViewsAnalytics extends Component
 
     private function loadViewsData()
     {
-        return SurveyViewsAnalyticsModel::select(DB::raw('DATE(viewed_at) as date'), DB::raw('count(*) as views'))
-            ->where('survey_id', $this->surveyId)
-            ->whereBetween('viewed_at', [$this->startDate, $this->endDate])
-            ->groupBy('date')
+        // If surveyId is null, load aggregate data for all surveys
+        $query = SurveyViewsAnalyticsModel::select(DB::raw('DATE(viewed_at) as date'), DB::raw('count(*) as views'))
+            ->whereBetween('viewed_at', [$this->startDate, $this->endDate]);
+
+        if ($this->surveyId !== null) {
+            $query->where('survey_id', $this->surveyId);
+        }
+
+        return $query->groupBy('date')
             ->orderBy('date', 'asc')
             ->get()
             ->map(function ($item) {
@@ -93,7 +98,7 @@ class SurveyViewsAnalytics extends Component
         $this->viewsData = $this->loadViewsData();
 
         $lineChartModel = (new LineChartModel())
-            ->setTitle('Survey Views')
+            ->setTitle($this->surveyId ? 'Survey Views' : 'All Surveys Views') // Dynamic title
             ->setAnimated(true)
             ->withoutLegend()
             ->setColors(['#6875f5'])

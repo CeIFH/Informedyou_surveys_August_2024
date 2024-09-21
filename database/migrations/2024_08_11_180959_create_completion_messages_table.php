@@ -10,7 +10,7 @@ class CreateCompletionMessagesTable extends Migration
     {
         Schema::create('completion_messages', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('survey_id')->constrained();
+            $table->foreignId('survey_id')->nullable()->constrained()->onDelete('set null');  // Allow survey_id to be set to NULL
             $table->string('title');
             $table->text('content');
             $table->text('condition')->nullable();

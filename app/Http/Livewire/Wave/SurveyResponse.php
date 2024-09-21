@@ -227,6 +227,7 @@ class SurveyResponse extends Component
 
             $data = [
                 'survey_id' => $this->survey->id,
+                'company_id' => $this->survey->company_id, // Add this line to include company_id
                 'responses' => json_encode($formattedResponses),
                 'ip_address' => $ipAddress,
                 'geolocation' => json_encode($geolocation),

@@ -18,15 +18,30 @@ class FolderShow extends Component
     public $folders = [];
     public $showFolderModal = false;
     public $newFolderName = '';
+    public $chartId;
+    public $folderId;
 
     protected $rules = [
         'newFolderName' => 'required|string|max:255',
     ];
 
-    public function mount($id)
+    public function mount($id = null)
     {
-        $this->folder = Folder::findOrFail($id);
+        $this->folderId = $id;
+        $this->loadFolder();
         $this->loadFolders();
+        $this->chartId = 'chart-' . uniqid();
+    }
+
+    public function loadFolder()
+    {
+        if ($this->folderId) {
+            $this->folder = Folder::findOrFail($this->folderId);
+        } else {
+            // Handle the case when no folder ID is provided
+            // For example, you could redirect to a default folder or show an error message
+            $this->folder = null;
+        }
     }
 
     public function loadFolders()
@@ -83,9 +98,19 @@ class FolderShow extends Component
             ->setAnimated(true)
             ->withDataLabels();
 
-        foreach ($viewsData as $datetime => $count) {
-            $lineChartModel->addPoint(Carbon::parse($datetime)->format('H:i'), $count);
+        // Ensure there's at least one data point
+        if (empty($viewsData)) {
+            $lineChartModel->addPoint(now()->format('H:i'), 0);
+        } else {
+            foreach ($viewsData as $datetime => $count) {
+                $lineChartModel->addPoint(Carbon::parse($datetime)->format('H:i'), $count);
+            }
         }
+
+        \Log::info('Views Chart Data', [
+            'dataCount' => $lineChartModel->data()->count(),
+            'firstPoint' => $lineChartModel->data()->first(),
+        ]);
 
         return [
             'chartModel' => $lineChartModel,
@@ -95,12 +120,13 @@ class FolderShow extends Component
 
     public function render()
     {
-        $viewsChartData = $this->getViewsChartModel();
+        $viewsChartData = $this->folder ? $this->getViewsChartModel() : null;
 
         return view('livewire.wave.folder-show', [
-            'surveys' => $this->folder->surveys()->paginate(12),
-            'viewsChartModel' => $viewsChartData['chartModel'],
-            'viewsData' => $viewsChartData['viewsData']
+            'surveys' => $this->folder ? $this->folder->surveys()->paginate(12) : collect(),
+            'viewsChartModel' => $viewsChartData ? $viewsChartData['chartModel'] : null,
+            'viewsData' => $viewsChartData ? $viewsChartData['viewsData'] : [],
+            'chartId' => $this->chartId,
         ]);
     }
 }

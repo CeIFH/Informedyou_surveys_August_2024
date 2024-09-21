@@ -42,4 +42,9 @@ class User extends Authenticatable
     protected $casts = [
         'trial_ends_at' => 'datetime',
     ];
+
+    public function companies()
+    {
+        return $this->belongsToMany(Company::class)->withTimestamps();
+    }
 }

@@ -22,6 +22,11 @@ class CreateSurveyResponsesTable extends Migration
             $table->unsignedBigInteger('folder_id')->nullable()->comment('Optional foreign key referencing the folder');
             $table->unsignedBigInteger('user_id')->nullable()->comment('Optional foreign key referencing the user');
 
+            // Company information (new fields)
+            $table->unsignedBigInteger('company_id')->comment('Foreign key referencing the company');
+            // Remove the company_name column
+            // $table->string('company_name')->comment('Name of the company');
+
             // Additional requested fields
             $table->longText('responses')->comment('Stores user responses in JSON format');
             $table->string('signature', 255)->nullable()->comment('Stores digital signature for the survey (optional)');
@@ -89,6 +94,7 @@ class CreateSurveyResponsesTable extends Migration
             $table->foreign('survey_id')->references('id')->on('surveys')->onDelete('cascade')->comment('Foreign key constraint linking to surveys table');
             $table->foreign('folder_id')->references('id')->on('folders')->onDelete('set null')->comment('Foreign key constraint linking to folders table');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null')->comment('Foreign key constraint linking to users table');
+            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade')->comment('Foreign key constraint linking to companies table');
         });
     }
 

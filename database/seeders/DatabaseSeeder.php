@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call(RolesTableSeeder::class);
+        $this->call(CompaniesTableSeeder::class);
         $this->call(UsersTableSeeder::class);
         $this->call(UserRolesTableSeeder::class);
         $this->call(AnnouncementsTableSeeder::class);
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
         $this->call(VoyagerThemeOptionsTableSeeder::class);
         $this->call(WaveKeyValuesTableSeeder::class);
         $this->call(SurveyViewsAnalyticsSeeder::class);
+        $this->call(FoldersAndSurveysSeeder::class);
         fixPostgresSequence();
     }
 }

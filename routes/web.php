@@ -25,9 +25,11 @@ use App\Http\Livewire\Wave\SurveyExport;
 use App\Http\Livewire\Wave\SurveyDelete;
 use App\Http\Livewire\Wave\SurveyDuplicate;
 use App\Http\Livewire\Wave\SurveyShow;
+use App\Http\Livewire\Wave\Dashboard;
 
 //dashboards
 Route::get('/survey/dashboard', Home::class)->name('home');
+Route::get('/dashboards', Dashboard::class)->name('dashboard');
 
 // Surveys
 

@@ -9,7 +9,11 @@ class Folder extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $fillable = [
+        'name',
+        'company_id',
+        // other fillable attributes...
+    ];
 
     public function surveys()
     {
@@ -25,5 +29,10 @@ class Folder extends Model
     public function responses()
     {
         return $this->hasMany(FolderResponse::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 }

@@ -1,13 +1,13 @@
 {
-  "resources/css/app.css": {
-    "file": "assets/app-C24ONnXZ.css",
-    "src": "resources/css/app.css",
+  "resources/views/themes/tailwind/assets/js/app.js": {
+    "file": "assets/app-CxAyHRaS.js",
+    "name": "app",
+    "src": "resources/views/themes/tailwind/assets/js/app.js",
     "isEntry": true
   },
-  "resources/js/app.js": {
-    "file": "assets/app-I5i9CKeh.js",
-    "name": "app",
-    "src": "resources/js/app.js",
+  "resources/views/themes/tailwind/assets/sass/app.scss": {
+    "file": "assets/app-BMulR3VP.css",
+    "src": "resources/views/themes/tailwind/assets/sass/app.scss",
     "isEntry": true
   }
 }
