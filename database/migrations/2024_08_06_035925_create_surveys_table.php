@@ -14,8 +14,8 @@ class CreateSurveysTable extends Migration
             $table->json('content');
             $table->foreignId('folder_id')->nullable()->constrained()->onDelete('set null');
             $table->unsignedBigInteger('company_id');
-            // Remove the company_name column
-            // $table->string('company_name');
+            $table->unsignedInteger('view_count')->default(0)->comment('Number of times the survey was viewed');
+
             
             // Adding the new columns
             $table->string('logo', 191)->nullable();

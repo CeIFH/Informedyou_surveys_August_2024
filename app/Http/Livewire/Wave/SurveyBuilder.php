@@ -158,8 +158,11 @@ class SurveyBuilder extends Component
         $this->redirectUrl = $survey->redirect_url ?? '';
         $this->redirectType = $survey->redirect_type ?? 'button';
         $this->redirectDelay = $survey->redirect_delay ?? 5;
-        $this->isActive = $survey->is_active;
+        $this->isActive = (bool) $survey->is_active; // Ensure it's cast to boolean
         $this->inactiveMessage = $survey->inactive_message;
+
+        // Log the value for debugging
+        Log::info('Survey active status:', ['isActive' => $this->isActive]);
     }
 
     public function saveSurvey()
