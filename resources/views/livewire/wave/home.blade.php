@@ -172,7 +172,9 @@
                     {{ $folders->links() }}
                 </div>
             </div>
-
+            <div>
+            <livewire:wave.folder-analytics />
+        </div>
             <!-- Survey Views Analytics -->
             <div class="mt-8">
                 <livewire:wave.survey-views-analytics :survey-id="$selectedSurveyId" />
@@ -249,7 +251,7 @@
                                         <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                                         </svg>
-                                        <span>{{ $survey->responses_count ?? 0 }} Responses</span>
+                                        <span>{{ $survey->completionCount ?? 0 }} Responses</span>
                                     </div>
                                     <span>{{ $survey->created_at->format('M d, Y') }}</span>
                                 </div>
@@ -259,7 +261,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                         </svg>
-                                        <span>{{ $survey->page_visits ?? 0 }} Visits</span>
+                                        <span>{{ $survey->view_count ?? 0 }} Visits</span>
                                     </div>
                                 </div>
                                 <div class="mt-auto flex justify-between items-center">
@@ -316,6 +318,20 @@
                                         </button>
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-500 uppercase tracking-wider">
+                                        <button wire:click="sortSurveys('view_count')" class="flex items-center">
+                                            Visits
+                                            @if($surveySortField === 'view_count')
+                                                <svg class="ml-1 w-3 h-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                                    @if($surveySortAsc)
+                                                        <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    @else
+                                                        <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                                    @endif
+                                                </svg>
+                                            @endif
+                                        </button>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-indigo-500 uppercase tracking-wider">
                                         <button wire:click="sortSurveys('created_at')" class="flex items-center">
                                             Created At
                                             @if($surveySortField === 'created_at')
@@ -336,7 +352,8 @@
                                 @foreach($folderSurveys as $survey)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $survey->title }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $survey->responses_count ?? 0 }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{  $survey->completionCount ?? 0 }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{  $survey->view_count ?? 0 }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $survey->created_at->format('M d, Y') }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <a href="{{ route('survey.edit', ['surveyId' => $survey->id]) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
@@ -361,6 +378,13 @@
                 </div>
             </div>
         </div>
+
+
+        <div>
+            <livewire:wave.survey-analytics />
+        </div>
+
+
 
         <!-- Create/Edit Folder Modal -->
         @if($showFolderModal)

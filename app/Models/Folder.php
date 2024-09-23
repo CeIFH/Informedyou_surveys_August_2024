@@ -35,4 +35,9 @@ class Folder extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function incrementSurveysViewCount()
+    {
+        $this->surveys()->increment('view_count');
+    }
 }

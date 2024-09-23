@@ -36,7 +36,7 @@ class Home extends Component
     public $surveyToDelete;
     public $showDeleteSurveyModal = false;
     public $surveyDeleteConfirmationText = '';
-
+    public $surveys;
 
     // Sorting variables for folders
     public $folderSortField = 'name';
@@ -270,81 +270,87 @@ class Home extends Component
 
     #[Layout('layouts.app')]
     public function render()
-    {
-        Log::info('Render method called', [
-            'componentId' => $this->id ?? 'Not set',
-            'class' => get_class($this),
-            'traits' => class_uses($this),
+{
+    Log::info('Render method called', [
+        'componentId' => $this->id ?? 'Not set',
+        'class' => get_class($this),
+        'traits' => class_uses($this),
+    ]);
+
+    $userCompanies = Auth::user()->companies;
+    Log::info('User Companies:', $userCompanies->toArray());
+    Log::info('Selected Company ID: ' . $this->selectedCompanyId);
+
+    if ($this->selectedCompanyId && $userCompanies->contains('id', $this->selectedCompanyId)) {
+        $this->totalCompanySurveys = Survey::where('company_id', $this->selectedCompanyId)
+            ->where('title', 'like', '%' . $this->surveySearch . '%')
+            ->count();
+        
+        Log::info('Total company surveys', ['count' => $this->totalCompanySurveys]);
+
+        $foldersQuery = Folder::where('company_id', $this->selectedCompanyId)
+            ->where('name', 'like', '%' . $this->folderSearch . '%')
+            ->orderBy($this->folderSortField, $this->folderSortAsc ? 'asc' : 'desc');
+
+        $totalFolders = $foldersQuery->count();
+        $folders = $foldersQuery->paginate(11, ['*'], 'folders');
+
+        Log::info('Folders query', [
+            'totalFolders' => $totalFolders,
+            'foldersCount' => $folders->count()
         ]);
 
-        $userCompanies = Auth::user()->companies;
-        Log::info('User Companies:', $userCompanies->toArray());
-        Log::info('Selected Company ID: ' . $this->selectedCompanyId);
+        $surveysQuery = Survey::where('company_id', $this->selectedCompanyId);
 
-        if ($this->selectedCompanyId && $userCompanies->contains('id', $this->selectedCompanyId)) {
-            $this->totalCompanySurveys = Survey::where('company_id', $this->selectedCompanyId)
-                ->where('title', 'like', '%' . $this->surveySearch . '%')
-                ->count();
-            
-            Log::info('Total company surveys', ['count' => $this->totalCompanySurveys]);
-
-            $foldersQuery = Folder::where('company_id', $this->selectedCompanyId)
-                ->where('name', 'like', '%' . $this->folderSearch . '%')
-                ->orderBy($this->folderSortField, $this->folderSortAsc ? 'asc' : 'desc');
-
-            $totalFolders = $foldersQuery->count();
-            $folders = $foldersQuery->paginate(11, ['*'], 'folders');
-
-            Log::info('Folders query', [
-                'totalFolders' => $totalFolders,
-                'foldersCount' => $folders->count()
-            ]);
-
-            $surveysQuery = Survey::where('company_id', $this->selectedCompanyId);
-
-            if ($this->selectedFolderId) {
-                $surveysQuery->where('folder_id', $this->selectedFolderId);
-                Log::info('Filtering surveys by folder', ['folderId' => $this->selectedFolderId]);
-            }
-
-            $surveysQuery = $surveysQuery->where('title', 'like', '%' . $this->surveySearch . '%')
-                ->orderBy($this->surveySortField, $this->surveySortAsc ? 'asc' : 'desc');
-
-            $totalSurveys = $surveysQuery->count();
-            $folderSurveys = $surveysQuery->paginate(11, ['*'], 'surveys');
-
-            Log::info('Surveys query', [
-                'totalSurveys' => $totalSurveys,
-                'folderSurveysCount' => $folderSurveys->count()
-            ]);
-        } else {
-            Log::info('No company selected or user does not have access');
-            $folders = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 11);
-            $totalFolders = 0;
-            $folderSurveys = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 11);
-            $totalSurveys = 0;
-            $this->totalCompanySurveys = 0;
+        if ($this->selectedFolderId) {
+            $surveysQuery->where('folder_id', $this->selectedFolderId);
+            Log::info('Filtering surveys by folder', ['folderId' => $this->selectedFolderId]);
         }
 
-        $viewData = [
-            'folders' => $folders,
-            'totalFolders' => $folders->total(),
-            'folderSurveys' => $folderSurveys,
-            'totalSurveys' => $this->selectedFolderId ? $totalSurveys : $this->totalCompanySurveys,
-            'selectedFolder' => $this->selectedFolderId ? Folder::find($this->selectedFolderId) : null,
-            'userCompanies' => $userCompanies,
-            'selectedFolderName' => $this->selectedFolderName,
-        ];
+        $surveysQuery = $surveysQuery->where('title', 'like', '%' . $this->surveySearch . '%')
+            ->orderBy($this->surveySortField, $this->surveySortAsc ? 'asc' : 'desc');
 
-        Log::info('render method completed', [
-            'viewDataKeys' => array_keys($viewData),
-            'totalSurveys' => $viewData['totalSurveys'],
-            'selectedFolderName' => $viewData['selectedFolderName'],
-            'componentId' => $this->id
+        $totalSurveys = $surveysQuery->count();
+        $folderSurveys = $surveysQuery->paginate(11, ['*'], 'surveys');
+
+        // Calculate completion count for each survey
+        $folderSurveys->getCollection()->transform(function ($survey) {
+            $survey->completionCount = $survey->getCompletionCount();
+            return $survey;
+        });
+
+        Log::info('Surveys query', [
+            'totalSurveys' => $totalSurveys,
+            'folderSurveysCount' => $folderSurveys->count()
         ]);
-
-        return view('livewire.wave.home', $viewData);
+    } else {
+        Log::info('No company selected or user does not have access');
+        $folders = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 11);
+        $totalFolders = 0;
+        $folderSurveys = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 11);
+        $totalSurveys = 0;
+        $this->totalCompanySurveys = 0;
     }
+
+    $viewData = [
+        'folders' => $folders,
+        'totalFolders' => $folders->total(),
+        'folderSurveys' => $folderSurveys,
+        'totalSurveys' => $this->selectedFolderId ? $totalSurveys : $this->totalCompanySurveys,
+        'selectedFolder' => $this->selectedFolderId ? Folder::find($this->selectedFolderId) : null,
+        'userCompanies' => $userCompanies,
+        'selectedFolderName' => $this->selectedFolderName,
+    ];
+
+    Log::info('render method completed', [
+        'viewDataKeys' => array_keys($viewData),
+        'totalSurveys' => $viewData['totalSurveys'],
+        'selectedFolderName' => $viewData['selectedFolderName'],
+        'componentId' => $this->id
+    ]);
+
+    return view('livewire.wave.home', $viewData);
+}
 
     public function mount()
     {
@@ -368,6 +374,7 @@ class Home extends Component
         }
         
         $this->loadCompanyData();
+
     }
     
     private function loadCompanyData()

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class Survey extends Model
 {
@@ -127,5 +129,27 @@ class Survey extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    // Remove the incrementViewCount method if it exists
+
+    public function updateCompletionCount()
+    {
+        $completionCount = DB::table('survey_responses')
+            ->where('survey_id', $this->id)
+            ->where('completion_count', 1)
+            ->count();
+
+        $this->completion_count = $completionCount;
+        $this->save();
+
+        return $completionCount;
+    }
+
+    public function getCompletionCount()
+    {
+        return DB::table('survey_responses')
+            ->where('survey_id', $this->id)
+            ->sum('completion_count');
     }
 }

@@ -21,6 +21,8 @@ class SurveyResponse extends Component
     use WithFileUploads;
 
     public $survey;
+    public $title;
+    public $questions;
     public $responses = [];
     public $signatures = [];
     public $surveyResponse;
@@ -34,19 +36,45 @@ class SurveyResponse extends Component
 
     public function mount($id)
     {
+        Log::info("SurveyResponse mount method called for survey ID: {$id}");
+        
         $this->survey = Survey::findOrFail($id);
+        
+        Log::info("Survey found", ['survey_id' => $this->survey->id, 'current_view_count' => $this->survey->view_count]);
+        
+        $this->incrementViewCount();
+        
+        $this->title = $this->survey->title;
+        $this->questions = json_decode($this->survey->content, true);
         $this->isActive = $this->survey->is_active;
         $this->inactiveMessage = $this->survey->inactive_message;
 
-        if ($this->isActive) {
-            $questions = json_decode($this->survey->content, true);
+        // Additional logging for more context
+        Log::info("SurveyResponse component mounted for survey: {$this->survey->id}", [
+            'user_id' => auth()->id() ?? 'guest',
+            'ip_address' => request()->ip(),
+        ]);
 
+        if ($this->isActive) {
             // Generate a unique token for this survey session
             $this->surveyToken = md5(uniqid(rand(), true));
             session(['survey_token' => $this->surveyToken]);
 
-            $this->initializeResponses($questions);
+            $this->initializeResponses($this->questions);
         }
+    }
+
+    private function incrementViewCount()
+    {
+        $oldCount = $this->survey->view_count;
+        $this->survey->increment('view_count');
+        $this->survey->refresh();  // Refresh the model to get the updated view_count
+        
+        Log::info("Survey view count incremented", [
+            'survey_id' => $this->survey->id,
+            'old_count' => $oldCount,
+            'new_count' => $this->survey->view_count
+        ]);
     }
 
     private function initializeResponses($questions)
@@ -238,6 +266,7 @@ class SurveyResponse extends Component
                 'response_completed_at' => $responseCompletedAt,
                 'response_duration' => $responseDuration,
                 'is_completed' => $isFullyCompleted,
+                'completion_count' => 1, // Set to 1 for a successful submission
             ];
 
             Log::debug('Data before database insertion', $data);
