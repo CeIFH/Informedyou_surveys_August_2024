@@ -152,4 +152,14 @@ class Survey extends Model
             ->where('survey_id', $this->id)
             ->sum('completion_count');
     }
+
+    public function incrementViewCount()
+    {
+        $this->increment('view_count');
+    }
+
+    public function questions()
+    {
+        return $this->hasMany(Question::class);
+    }
 }

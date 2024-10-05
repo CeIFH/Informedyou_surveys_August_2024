@@ -9,9 +9,14 @@ use App\Models\Company;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\Question;
+use App\Models\Option;
+use Livewire\Attributes\On;
+use App\Models\CompletionMessage;
 
 class Home extends Component
 {
@@ -23,6 +28,7 @@ class Home extends Component
     public $newFolderName = '';
     public $currentFolder = null;
     public $editingFolder = null;
+    public $editingFolderId = null;
     public $folderGridView = true;
     public $surveyGridView = true;
     public $folderSearch = '';
@@ -37,14 +43,16 @@ class Home extends Component
     public $showDeleteSurveyModal = false;
     public $surveyDeleteConfirmationText = '';
     public $surveys;
+    public $editingFolderName = '';
+
 
     // Sorting variables for folders
-    public $folderSortField = 'name';
-    public $folderSortAsc = true;
+    public $folderSortField = 'created_at';
+    public $folderSortAsc = false;
 
     // Sorting variables for surveys
-    public $surveySortField = 'title';
-    public $surveySortAsc = true;
+    public $surveySortField = 'created_at';
+    public $surveySortAsc = false;
 
     // Survey Dropdown Properties
     public $showDropdown = false;
@@ -57,67 +65,120 @@ class Home extends Component
 
     protected $queryString = ['folderSearch', 'surveySearch', 'selectedFolderId', 'selectedCompanyId'];
 
-    protected $listeners = [
-        'folderCreated' => '$refresh',
-        'survey-dropdown' => '$refresh',
-        'folderDeleted' => '$refresh'
-    ];
+    public $showDeleteEmptyFolderModal = false;
 
-    protected $rules = [
-        'newFolderName' => 'required|string|max:255',
-        'folderDeleteConfirmationText' => 'required|in:delete surveys and folder',
-        'surveyDeleteConfirmationText' => 'required|in:delete',
-    ];
-
-    public function toggleFolderList()
+    public function mount()
     {
-        $this->showFolderList = !$this->showFolderList;
+        $this->id = uniqid();
+        Log::info('Home component mounted', ['componentId' => $this->id]);
+        
+        // Get the companies the user is assigned to
+        $userCompanies = Auth::user()->companies;
+        
+        if ($userCompanies->isNotEmpty()) {
+            // Set the selected company to the first company the user is assigned to
+            $this->selectedCompanyId = $userCompanies->first()->id;
+            session(['selected_company_id' => $this->selectedCompanyId]);
+        } else {
+            // Handle the case where the user has no assigned companies
+            Log::warning('User has no assigned companies', ['userId' => Auth::id()]);
+            // You might want to redirect to an error page or show a message
+            $this->selectedCompanyId = null;
+        }
+        
+        // Always set the default folder to "All Surveys"
+        $this->selectedFolderId = null;
+        $this->selectedFolderName = 'All Surveys';
+        
+        // Remove the session check for selected_folder_id
+        // session('selected_folder_id', null);
+        
+        $this->loadCompanyData();
+    }
+
+    private function loadCompanyData()
+    {
+        if ($this->selectedCompanyId && Auth::user()->companies->contains('id', $this->selectedCompanyId)) {
+            $this->totalCompanySurveys = Survey::where('company_id', $this->selectedCompanyId)->count();
+        } else {
+            $this->totalCompanySurveys = 0;
+        }
     }
 
     public function selectFolder($folderId = null, $folderName = 'All Surveys')
     {
-        Log::info('selectFolder method called', [
-            'folderId' => $folderId,
-            'folderName' => $folderName,
-        ]);
-        
-        try {
-            $this->selectedFolderId = ($folderId !== 'null' && $folderId !== null) ? $folderId : null;
-            $this->selectedFolderName = $folderName;
-            
-            $this->resetPage('surveys');
-            $this->showFolderList = false;
-            
-            session(['selected_folder_id' => $this->selectedFolderId]);
-            
-            $this->dispatch('folderSelected', [
-                'folderId' => $this->selectedFolderId,
-                'folderName' => $this->selectedFolderName
-            ]);
-            
-            Log::info('selectFolder method completed', [
-                'newSelectedFolderId' => $this->selectedFolderId,
-                'newSelectedFolderName' => $this->selectedFolderName,
-                'sessionFolderId' => session('selected_folder_id'),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error in selectFolder method', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-        }
-    }
-    
-    public function updatedSelectedFolderId()
-    {
+        $this->selectedFolderId = $folderId;
+        $this->selectedFolderName = $folderName;
         $this->resetPage('surveys');
+        $this->showFolderList = false;
+        // Reset selected survey when changing folders
+        $this->selectedSurveyId = null;
+        
+        // Update the session
+        session(['selected_folder_id' => $this->selectedFolderId]);
+        
+        // Dispatch an event to reset survey analytics
+    $this->dispatch('resetSurveyAnalytics');
+        // Dispatch an event if needed
+        $this->dispatch('folderSelected', [
+            'folderId' => $this->selectedFolderId,
+            'folderName' => $this->selectedFolderName
+        ]);
+
+        // Reset survey analytics
+        $this->dispatch('resetSurveyAnalytics');
     }
 
-    public function refreshFolders()
+    public function selectSurvey($surveyId)
     {
-        Log::info('Refreshing folders');
-        $this->render();
+        if (Survey::where('company_id', $this->selectedCompanyId)->where('id', $surveyId)->exists()) {
+            $this->selectedSurveyId = $surveyId;
+            $this->dispatch('surveySelected', surveyId: $surveyId);
+            
+            // Force a full page reload
+            $this->dispatch('reloadPage');
+        } else {
+            // Handle invalid survey selection
+            Log::warning('Invalid survey selection attempt', ['userId' => Auth::id(), 'surveyId' => $surveyId]);
+            session()->flash('error', 'Invalid survey selection.');
+        }
     }
+
+    // ... (keep other existing methods)
+
+    public function confirmDeleteSurvey($surveyId)
+    {
+        $this->surveyToDelete = Survey::findOrFail($surveyId);
+        $this->showDeleteSurveyModal = true;
+        $this->surveyDeleteConfirmationText = '';
+        $this->dispatch('closeDropdown');
+    }
+
+    public function cancelDeleteSurvey()
+    {
+        $this->showDeleteSurveyModal = false;
+        $this->surveyToDelete = null;
+        $this->surveyDeleteConfirmationText = '';
+        $this->resetValidation('surveyDeleteConfirmationText');
+    }
+
+    public function deleteSurvey()
+    {
+        $this->validate([
+            'surveyDeleteConfirmationText' => 'required|in:delete',
+        ]);
+
+        if ($this->surveyToDelete) {
+            $this->surveyToDelete->delete();
+            $this->showDeleteSurveyModal = false;
+            $this->surveyToDelete = null;
+            $this->surveyDeleteConfirmationText = '';
+            session()->flash('message', 'Survey deleted successfully.');
+            $this->dispatch('surveyDeleted');
+        }
+    }
+
+    // ... (keep other existing methods)
 
     public function toggleFolderView()
     {
@@ -129,26 +190,115 @@ class Home extends Component
         $this->surveyGridView = !$this->surveyGridView;
     }
 
-    public function sortFolders($field)
+    #[Layout('layouts.app')]
+    public function render()
     {
-        if ($this->folderSortField === $field) {
-            $this->folderSortAsc = !$this->folderSortAsc;
-        } else {
-            $this->folderSortAsc = true;
-        }
+        $userCompanies = Auth::user()->companies;
         
-        $this->folderSortField = $field;
+        if ($this->selectedCompanyId && $userCompanies->contains('id', $this->selectedCompanyId)) {
+            $this->totalCompanySurveys = Survey::where('company_id', $this->selectedCompanyId)
+                ->where('title', 'like', '%' . $this->surveySearch . '%')
+                ->count();
+            
+            $foldersQuery = Folder::where('company_id', $this->selectedCompanyId)
+                ->where('name', 'like', '%' . $this->folderSearch . '%')
+                ->orderBy($this->folderSortField, $this->folderSortAsc ? 'asc' : 'desc');
+
+            $totalFolders = $foldersQuery->count();
+            $folders = $foldersQuery->paginate(11, ['*'], 'folders');
+
+            $surveysQuery = Survey::where('company_id', $this->selectedCompanyId);
+
+            // Only filter by folder if a specific folder is selected
+            if ($this->selectedFolderId) {
+                $surveysQuery->where('folder_id', $this->selectedFolderId);
+            }
+
+            $surveysQuery = $surveysQuery->where('title', 'like', '%' . $this->surveySearch . '%')
+                ->orderBy($this->surveySortField, $this->surveySortAsc ? 'asc' : 'desc');
+
+            $totalSurveys = $surveysQuery->count();
+            $folderSurveys = $surveysQuery->paginate(11, ['*'], 'surveys');
+
+            // Calculate completion count for each survey
+            $folderSurveys->getCollection()->transform(function ($survey) {
+                $survey->completionCount = $survey->getCompletionCount();
+                return $survey;
+            });
+
+            $viewData = [
+                'folders' => $folders,
+                'totalFolders' => $totalFolders,
+                'folderSurveys' => $folderSurveys,
+                'totalSurveys' => $this->selectedFolderId ? $totalSurveys : $this->totalCompanySurveys,
+                'selectedFolder' => $this->selectedFolderId ? Folder::where('company_id', $this->selectedCompanyId)->find($this->selectedFolderId) : null,
+                'userCompanies' => $userCompanies,
+                'selectedFolderName' => $this->selectedFolderName,
+                'selectedSurveyId' => $this->selectedSurveyId,
+                'hasAccess' => true,
+            ];
+        } else {
+            $viewData = [
+                'folders' => collect(),
+                'totalFolders' => 0,
+                'folderSurveys' => collect(),
+                'totalSurveys' => 0,
+                'selectedFolder' => null,
+                'userCompanies' => $userCompanies,
+                'selectedFolderName' => 'All Surveys',
+                'selectedSurveyId' => null,
+                'hasAccess' => false,
+            ];
+        }
+
+        return view('livewire.wave.home', $viewData);
     }
 
-    public function sortSurveys($field)
+    // ... (keep other existing methods)
+
+    public function duplicateSurvey($surveyId)
     {
-        if ($this->surveySortField === $field) {
-            $this->surveySortAsc = !$this->surveySortAsc;
-        } else {
-            $this->surveySortAsc = true;
+        DB::beginTransaction();
+
+        try {
+            $originalSurvey = Survey::findOrFail($surveyId);
+
+            // Duplicate the survey
+            $newSurvey = $originalSurvey->replicate();
+            $newSurvey->title = "Copy of " . $newSurvey->title;
+            $newSurvey->view_count = 0; // Reset view count for the new survey
+            $newSurvey->save();
+
+            // The content column already contains the questions and options in JSON format
+            // No need to duplicate questions and options separately
+
+            // Duplicate other attributes if needed
+            // For example, if you need to create new records in other tables that reference this survey,
+            // you would do that here.
+
+            DB::commit();
+
+            // Log success
+            Log::info('Survey duplicated successfully', ['original_id' => $surveyId, 'new_id' => $newSurvey->id]);
+
+            // Flash success message
+            session()->flash('message', 'Survey duplicated successfully.');
+
+            // Optionally redirect to the new survey's edit page
+            return redirect()->route('survey.edit', ['surveyId' => $newSurvey->id]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log error
+            Log::error('Survey duplication failed', ['survey_id' => $surveyId, 'error' => $e->getMessage()]);
+
+            // Flash error message
+            session()->flash('error', 'Failed to duplicate survey. Please try again.');
+
+            // Optionally, you can rethrow the exception if you want it to be handled by Laravel's exception handler
+            // throw $e;
         }
-        
-        $this->surveySortField = $field;
     }
 
     public function switchCompany($companyId)
@@ -156,54 +306,53 @@ class Home extends Component
         if (Auth::user()->companies->contains('id', $companyId)) {
             $this->selectedCompanyId = $companyId;
             session(['selected_company_id' => $companyId]);
-            $this->resetPage('folders');
-            $this->resetPage('surveys');
+            
+            // Reset folder selection
             $this->selectedFolderId = null;
             $this->selectedFolderName = 'All Surveys';
+            session()->forget('selected_folder_id');
+            
+   // Reset selected survey
+   $this->selectedSurveyId = null;
+
+            // Reset search and pagination
+            $this->folderSearch = '';
+            $this->surveySearch = '';
+            $this->resetPage('folders');
+            $this->resetPage('surveys');
+
             $this->loadCompanyData();
+            
+            // Dispatch an event to reset survey analytics
+            $this->dispatch('resetSurveyAnalytics');
+
+            // Force a complete re-render of the component
             $this->dispatch('companyChanged');
+
+            // Refresh the entire page
+            $this->dispatch('refreshPage');
         } else {
             session()->flash('error', 'You do not have permission to access this company.');
         }
     }
 
-    public function updatingFolderSearch()
+    public function updatedSelectedCompanyId()
     {
-        $this->resetPage('folders');
+        $this->switchCompany($this->selectedCompanyId);
     }
 
-    public function updatingSurveySearch()
+    public function updatedSelectedFolderId()
     {
+        if ($this->selectedFolderId) {
+            $folder = Folder::find($this->selectedFolderId);
+            if ($folder) {
+                $this->selectedFolderName = $folder->name;
+            }
+        } else {
+            $this->selectedFolderName = 'All Surveys';
+        }
         $this->resetPage('surveys');
     }
-
-    public function clearFolderSearch()
-    {
-        $this->folderSearch = '';
-        $this->resetPage('folders');
-        $this->render();
-    }
-
-    public function clearSurveySearch()
-    {
-        $this->surveySearch = '';
-        $this->resetPage('surveys');
-    }
-
-    public function updatedFolderSearch()
-    {
-        $this->resetPage('folders');
-        $this->render(); 
-
-    }
-
-    public function updatedSurveySearch()
-    {
-        $this->resetPage('surveys');
-    }
-
-    public $editingFolderId = null;
-    public $editingFolderName = '';
 
     public function toggleFolderModal($folderId = null)
 {
@@ -219,7 +368,7 @@ class Home extends Component
     $this->dispatch('closeDropdown');
 }
 
-    public function saveFolder()
+public function saveFolder()
     {
         $this->validate([
             'editingFolderName' => 'required|string|max:255',
@@ -260,215 +409,16 @@ class Home extends Component
         }
     }
 
-    public function refreshFolderList()
+    public function sortFolders($field)
     {
-        $this->selectedFolderId = null;
-        $this->selectedFolderName = 'All Surveys';
-        $this->resetPage('folders');
-        $this->resetPage('surveys');
-    }
-
-    #[Layout('layouts.app')]
-    public function render()
-{
-    Log::info('Render method called', [
-        'componentId' => $this->id ?? 'Not set',
-        'class' => get_class($this),
-        'traits' => class_uses($this),
-    ]);
-
-    $userCompanies = Auth::user()->companies;
-    Log::info('User Companies:', $userCompanies->toArray());
-    Log::info('Selected Company ID: ' . $this->selectedCompanyId);
-
-    if ($this->selectedCompanyId && $userCompanies->contains('id', $this->selectedCompanyId)) {
-        $this->totalCompanySurveys = Survey::where('company_id', $this->selectedCompanyId)
-            ->where('title', 'like', '%' . $this->surveySearch . '%')
-            ->count();
-        
-        Log::info('Total company surveys', ['count' => $this->totalCompanySurveys]);
-
-        $foldersQuery = Folder::where('company_id', $this->selectedCompanyId)
-            ->where('name', 'like', '%' . $this->folderSearch . '%')
-            ->orderBy($this->folderSortField, $this->folderSortAsc ? 'asc' : 'desc');
-
-        $totalFolders = $foldersQuery->count();
-        $folders = $foldersQuery->paginate(11, ['*'], 'folders');
-
-        Log::info('Folders query', [
-            'totalFolders' => $totalFolders,
-            'foldersCount' => $folders->count()
-        ]);
-
-        $surveysQuery = Survey::where('company_id', $this->selectedCompanyId);
-
-        if ($this->selectedFolderId) {
-            $surveysQuery->where('folder_id', $this->selectedFolderId);
-            Log::info('Filtering surveys by folder', ['folderId' => $this->selectedFolderId]);
-        }
-
-        $surveysQuery = $surveysQuery->where('title', 'like', '%' . $this->surveySearch . '%')
-            ->orderBy($this->surveySortField, $this->surveySortAsc ? 'asc' : 'desc');
-
-        $totalSurveys = $surveysQuery->count();
-        $folderSurveys = $surveysQuery->paginate(11, ['*'], 'surveys');
-
-        // Calculate completion count for each survey
-        $folderSurveys->getCollection()->transform(function ($survey) {
-            $survey->completionCount = $survey->getCompletionCount();
-            return $survey;
-        });
-
-        Log::info('Surveys query', [
-            'totalSurveys' => $totalSurveys,
-            'folderSurveysCount' => $folderSurveys->count()
-        ]);
-    } else {
-        Log::info('No company selected or user does not have access');
-        $folders = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 11);
-        $totalFolders = 0;
-        $folderSurveys = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 11);
-        $totalSurveys = 0;
-        $this->totalCompanySurveys = 0;
-    }
-
-    $viewData = [
-        'folders' => $folders,
-        'totalFolders' => $folders->total(),
-        'folderSurveys' => $folderSurveys,
-        'totalSurveys' => $this->selectedFolderId ? $totalSurveys : $this->totalCompanySurveys,
-        'selectedFolder' => $this->selectedFolderId ? Folder::find($this->selectedFolderId) : null,
-        'userCompanies' => $userCompanies,
-        'selectedFolderName' => $this->selectedFolderName,
-    ];
-
-    Log::info('render method completed', [
-        'viewDataKeys' => array_keys($viewData),
-        'totalSurveys' => $viewData['totalSurveys'],
-        'selectedFolderName' => $viewData['selectedFolderName'],
-        'componentId' => $this->id
-    ]);
-
-    return view('livewire.wave.home', $viewData);
-}
-
-    public function mount()
-    {
-        $this->id = uniqid();
-        Log::info('Home component mounted', ['componentId' => $this->id]);
-        
-        $this->selectedCompanyId = $this->selectedCompanyId ?? auth()->user()->companies->first()->id;
-        
-        $this->selectedFolderId = session('selected_folder_id', null);
-        
-        if ($this->selectedFolderId) {
-            $folder = Folder::find($this->selectedFolderId);
-            if ($folder) {
-                $this->selectedFolderName = $folder->name;
-            } else {
-                $this->selectedFolderId = null;
-                $this->selectedFolderName = 'All Surveys';
-            }
+        if ($this->folderSortField === $field) {
+            $this->folderSortAsc = !$this->folderSortAsc;
         } else {
-            $this->selectedFolderName = 'All Surveys';
-        }
-        
-        $this->loadCompanyData();
-
-    }
-    
-    private function loadCompanyData()
-    {
-        $this->render();
-    }
-
-    private function getFirstAccessibleSurvey()
-    {
-        return Survey::where('company_id', $this->selectedCompanyId)->first()->id ?? null;
-    }
-
-    public function createSurvey()
-    {
-        if (!$this->selectedCompanyId || !Auth::user()->companies->contains('id', $this->selectedCompanyId)) {
-            session()->flash('error', 'You do not have permission to create a survey for this company.');
-            return;
-        }
-
-        $company = Company::findOrFail($this->selectedCompanyId);
-        
-        Survey::create([
-            'title' => $this->surveyTitle,
-            'content' => $this->surveyContent,
-            'company_id' => $company->id,
-            // ... other survey attributes ...
-        ]);
-    }
-
-    // Survey Dropdown Methods
-    
-    public function toggleDropdown()
-    {
-        $this->showDropdown = !$this->showDropdown;
-    }
-
-    public function duplicateSurvey($surveyId)
-    {
-        $survey = Survey::findOrFail($surveyId);
-        $newSurvey = $survey->replicate();
-        $newSurvey->title = 'Copy of ' . $newSurvey->title;
-        $newSurvey->save();
-        $this->showDropdown = false;
-        $this->dispatch('surveyDuplicated');
-        session()->flash('message', 'Survey duplicated successfully.');
-    }
-
- 
-
-    public function cancelDelete()
-    {
-        $this->showDeleteModal = false;
-        $this->surveyToDelete = null;
-        $this->deleteConfirmationText = '';
-    }
-
-    public function confirmDeleteSurvey($surveyId)
-    {
-        $this->surveyToDelete = Survey::findOrFail($surveyId);
-        $this->showDeleteSurveyModal = true;
-        $this->surveyDeleteConfirmationText = '';
-        $this->dispatch('closeDropdown');
-    }
-
-    public function cancelDeleteSurvey()
-    {
-        $this->showDeleteSurveyModal = false;
-        $this->surveyToDelete = null;
-        $this->surveyDeleteConfirmationText = '';
-        $this->resetValidation('surveyDeleteConfirmationText');
-    }
-
-    public function deleteSurvey()
-    {
-        $this->validate([
-            'surveyDeleteConfirmationText' => 'required|in:delete',
-        ]);
-
-        if ($this->surveyToDelete) {
-            $this->surveyToDelete->delete();
-            $this->showDeleteSurveyModal = false;
-            $this->surveyToDelete = null;
-            $this->surveyDeleteConfirmationText = '';
-            session()->flash('message', 'Survey deleted successfully.');
-            $this->dispatch('surveyDeleted');
+            $this->folderSortField = $field;
+            $this->folderSortAsc = true;
         }
     }
 
-    public function closeDropdown()
-    {
-        $this->dispatch('closeDropdown');
-    }
-
-    
     // Folder Deletion Methods
 
     public function confirmDeleteFolder($folderId)
@@ -536,7 +486,34 @@ public function cancelDeleteFolder()
         $this->deleteConfirmationText = '';
     }
 
+    #[On('folderListUpdated')]
+    public function refreshFolderList()
+    {
+        // This method will be called when the folderListUpdated event is emitted
+        // The component will automatically re-render, which will fetch the updated folder list
+        $this->resetPage('folders');
+    }
 
+    public function sortSurveys($field)
+    {
+        if ($this->surveySortField === $field) {
+            $this->surveySortAsc = !$this->surveySortAsc;
+        } else {
+            $this->surveySortField = $field;
+            $this->surveySortAsc = false; // Default to descending order when changing fields
+        }
+    }
+
+    public function refreshPage()
+    {
+        // This method will be called by the 'refreshPage' event
+        // It doesn't need to do anything as the component will re-render automatically
+    }
+
+    public function reloadPage()
+    {
+        // This method will be called by the 'reloadPage' event
+        // It doesn't need to do anything as we'll handle the reload in JavaScript
+    }
 
 }
-
